@@ -51,7 +51,7 @@ public class ExpRand {
     public ExpRand(double alpha, double sigma, double dx, Long seed) {
 
         if (alpha < EPS) { throw new RuntimeException("alpha must be positive"); }
-        if (dx < EPS) { throw new RuntimeException("alpha must be positive"); }
+        if (dx < EPS) { throw new RuntimeException("dx must be positive"); }
 
         urand = (seed == null) ? new Random() : new Random(seed);
 
