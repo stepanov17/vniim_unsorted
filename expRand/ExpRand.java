@@ -82,11 +82,6 @@ public class ExpRand {
             q[NPERC - i - 1] = -q[i]; // the distr. is symmetric
         }
         q[NPERC / 2] = 0.;
-
-        // debug
-//        for (double v: perc) { System.out.println("> " + v); }
-//        System.out.println("");
-//        for (double v: q) { System.out.println("> " + v); }
     }
 
     // pdf

@@ -77,7 +77,7 @@ public class ExpRandCoverageFactor {
 
         while (I >= p0) {
             I_prev = I;
-            I -= dx * 0.125 * (f(x - dx) + 3. * (f(x - 2. * dx / 3.) + f(x - dx / 3.)) + f(x + dx)); // 3/8 rule
+            I -= dx * 0.125 * (f(x - dx) + 3. * (f(x - 2. * dx / 3.) + f(x - dx / 3.)) + f(x)); // 3/8 rule
             x -= dx;
         }
 
