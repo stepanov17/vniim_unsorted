@@ -72,4 +72,4 @@ for alpha = 0.5 : 0.05 : 1.2
 end
 
 
-fprintfMat("ACF.txt", DATA, "%7.4f");
+fprintfMat("ACFDATA.txt", DATA, "%7.4f");
