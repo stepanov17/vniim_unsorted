@@ -130,7 +130,7 @@ function [k] = getK(k1, k2, nSim)
         chkS(sim) = p(N);
 
         if (modulo(sim, printfFreq) == 0) then
-            printf("\t%d\n", sim);
+            printf("\t%d trials\n", sim);
         end
     end
 
@@ -138,12 +138,11 @@ function [k] = getK(k1, k2, nSim)
     p1 = kP * p1;
     p2 = kP * p2;
 
+    printf("\n>> check: s = %.3f\n", stdev(chkS));
     printf(">> k1 = %.4f, p1 = %.4f\n", k1, p1);
     printf(">> k2 = %.4f, p2 = %.4f\n", k2, p2);
 
     k = getArg(k1, p1, k2, p2);
-
-    printf("\n\n>> s = %.3f\n\n", stdev(chkS));
 
 endfunction
 

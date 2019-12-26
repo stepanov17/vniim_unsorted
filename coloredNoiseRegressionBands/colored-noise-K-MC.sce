@@ -159,7 +159,7 @@ function [k] = getK(k1, k2, nSim)
         chkS(sim) = p(N);
 
         if (modulo(sim, printfFreq) == 0) then
-            printf("\t%d\n", sim);
+            printf("\t%d trials\n", sim);
         end
     end
 

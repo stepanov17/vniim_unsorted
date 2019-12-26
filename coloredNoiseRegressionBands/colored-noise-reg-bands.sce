@@ -50,7 +50,7 @@ function [res] = getW(R, k)
 
 endfunction
 
-// get 2x2 Theta matrix for the GLSM such that the regression band is
+// get 2x2 Theta matrix for the GLSM such that the uncertainty is
 // u(t) = sqrt(Theta(1, 1) + 2 * t * Theta(1, 2) + t^2 * Theta(2, 2))
 // (for a unity noise dispersion)
 function [Theta] = getTheta(R, n0)
@@ -63,8 +63,8 @@ function [Theta] = getTheta(R, n0)
 endfunction
 
 // range of the data used for the reg. bands estimation: [0 .. n0 - 1]
-// noise variance in point is supposed to be equal to 1.
-function [u] = getBand(R, n0, t)
+// noise variance at point is supposed to be equal to 1.
+function [u] = getU(R, n0, t)
 
     Theta = getTheta(R, n0);
 
@@ -76,7 +76,7 @@ function [u] = getBand(R, n0, t)
 
 endfunction
 
-// fund t such that band u(t0) >= u0. the estimation interval for the band is [0 .. n0 - 1]
+// fund t such that band u(t0) >= u0. the estimation interval is [0 .. n0 - 1]
 function [t] = getTByU(R, n0, t0, dt, u0)
 
     Theta = getTheta(R, n0);
@@ -91,23 +91,23 @@ function [t] = getTByU(R, n0, t0, dt, u0)
 
 endfunction
 
-function plotBands(n0, n1)
+function plotU(n0, n1)
 
     dt = 0.1;
     t = 0 : dt : n1 - 1.;
 
     for i = 1 : m
         R = ACFDATA(i, 2 : n);
-        u = getBand(R, n0, t);
+        u = getU(R, n0, t);
         plot(t, u, 'k');
     end
 
     // uncorrelated white noise case
-    u = getBand(RW, n0, t);
+    u = getU(RW, n0, t);
     plot(t, u, 'r');
     plot([n0 n0], [0., 1.5], 'k--');
 
-    title("reg. bands, 1 / f^alpha noise, alpha = " + alpha_range + " (bottom to top), red is for white noise. n0 = " + string(n0));
+    title("u, 1 / f^alpha noise, alpha = " + alpha_range + " (bottom to top), red is for white noise. n0 = " + string(n0));
 
 endfunction
 
@@ -115,13 +115,13 @@ endfunction
 function [TK] = getTK(K, n0, dt)
 
     // white noise
-    u_tmp = getBand(RW, n0, [n0 - 1]);
+    u_tmp = getU(RW, n0, [n0 - 1]);
     u0 = K * u_tmp(1);
     TK = [getTByU(RW, n0, n0 + dt, dt, u0)];
 
     for i = 1 : m
         R = ACFDATA(i, 2 : n);
-        u_tmp = getBand(R, n0, [n0 - 1]);
+        u_tmp = getU(R, n0, [n0 - 1]);
         u0 = K * u_tmp(1);
         t = getTByU(R, n0, n0 + dt, dt, u0);
         TK = [TK; t]
@@ -141,7 +141,7 @@ function [TK] = getTKTable(n0)
 endfunction
 
 //plotACFs()
-plotBands(200, 500)
+plotU(200, 500)
 
 getTKTable(100)
 getTKTable(200)
