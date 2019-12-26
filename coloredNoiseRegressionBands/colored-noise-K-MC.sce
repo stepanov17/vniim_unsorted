@@ -10,7 +10,7 @@ stacksize('max');
 
 rand("seed", 1234512345);
 
-RDATA = fscanfMat("D:\other\exp_rel\ACFDATA.txt");
+RDATA = fscanfMat("ACFDATA.txt");
 
 // norming factor to make the noise stdev at point equal to 1
 KDATA = [
