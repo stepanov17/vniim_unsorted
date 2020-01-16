@@ -54,7 +54,7 @@ function [res] = AR(n, alpha, p)
        res(i) = alpha * res(i - 1) + tsp(i); 
     end
 
-    res = res(n0 + 1 : n1) * sqrt(1. - alpha^2);
+    res = res(n0 + 1 : n1) * sqrt(1. - alpha^2); // unity variance for noise
 
 endfunction
 
