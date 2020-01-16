@@ -7,7 +7,10 @@ clc;
 rand("seed", 1234512345);
 
 
-
+// van Dorp, Kotz, The Standard Two-Sided Power Distribution and its Properties. The American Statistician, May 2002, Vol. 56, No. 2
+// generate a symm. case with zero mean and unity variance
+// p = 1 => uniform disrt.
+// p = 2 => triangular distr.
 function [res] = TSP(n, p)
 
     c = 0.5;
@@ -17,18 +20,19 @@ function [res] = TSP(n, p)
         u = U(i);
         r = 0.;
         if (u < c) then
-            r = c * (u / c)^(1. / (p + 1));
+            r = c * (u / c)^(1. / p);
         else
-            r = 1. - (1. - c) * ((1. - u) / (1. - c))^(1. / (p + 1));
+            r = 1. - (1. - c) * ((1. - u) / (1. - c))^(1. / p);
         end
-        res(i) = r;
+        res(i) = r - c;
     end
-    res = res - 0.5;
-    c = 1. / stdev(res);
-    res = c * res;
+
+    // make the variance equal to 1
+    var = 0.5 / ((p + 1.) * (p + 2.));
+
+    res = (1. / sqrt(var)) * res;
 
 endfunction
-
 
 // AR(1)
 // x_i = alpha * x_{i - 1} + eps_i, eps_i from TSP(p)
