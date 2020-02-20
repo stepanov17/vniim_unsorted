@@ -48,10 +48,10 @@ function [res] = AR(n, alpha, p)
     res(1) = tsp(1);
 
     for i = 2 : n1
-       res(i) = alpha * res(i - 1) + tsp(i); 
+       res(i) = alpha * res(i - 1) + sqrt(1. - alpha^2) * tsp(i);
     end
 
-    res = res(n0 + 1 : n1) * sqrt(1. - alpha^2); // unity variance for noise
+    res = res(n0 + 1 : n1);
 
 endfunction
 
