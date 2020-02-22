@@ -35,28 +35,38 @@ function [res] = TSP(n, p)
 endfunction
 
 // AR(1)
-// x_i = alpha * x_{i - 1} + eps_i, eps_i from TSP(p)
+// x_i = alpha * x_{i - 1} + eps_i, eps_i from TSP(p) or normal distr. (p < 0i)
+// suppose alpha > 0
 function [res] = AR(n, alpha, p)
 
-    // eliminate an influence of the initial state
-    // 1.e-15 = alpha^n0  =>  n0 = -15 / log10(alpha)
-    n0 = round(-15. / log10(alpha));
+    n0 = 300;
+
+    if (alpha > 0.) then
+        // eliminate an influence of the initial state
+        // 1.e-15 = alpha^n0  =>  n0 = -15 / log10(alpha)
+        n0 = round(-15. / log10(abs(alpha)));
+    end
+
     n1 = n0 + n;
 
-    //printf("\nn0 = %d\n", n0);
-
     res = zeros(1, n1);
-    tsp = TSP(n1, p);
 
-    res(1) = tsp(1);
+    if (p < 0.) then
+        eps = rand(1, n1, "normal");
+    else
+        eps = TSP(n1, p);
+    end
+
+    res(1) = eps(1);
 
     for i = 2 : n1
-       res(i) = alpha * res(i - 1) + sqrt(1. - alpha^2) * tsp(i);
+       res(i) = alpha * res(i - 1) + sqrt(1. - alpha^2) * eps(i); 
     end
 
     res = res(n0 + 1 : n1);
 
 endfunction
+
 
 function [r] = ACF(n, alpha)
     r = ones(1, n);
