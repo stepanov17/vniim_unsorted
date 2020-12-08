@@ -1,0 +1,11 @@
+Regression model:
+
+y_k = b_0 + b_1 t_k + x_k,
+in particular, noise x_k could fit an AR(1) model:
+
+x_k = alpha x_{k - 1} + sqrt(1 - alpha^2) e_k, |alpha| < 1
+where e_k is a white noise.
+
+from a practical point of view, some common fixed values could be used for each level of P0 for quite wide ranges of N and N0
+
+the attached example ('probabilities.txt') provides coverage probabilities for such K values, N = 50, 100, 200, 500, 1000, 2000, and 0.2 * N <= N0 <= 0.8 * N0
