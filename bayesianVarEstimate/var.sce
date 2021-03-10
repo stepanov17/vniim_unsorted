@@ -98,7 +98,6 @@ for k = 1 : nSamples
     d = 0.5 * k * (n - 1);
     c = (2. * S^d) / gamma(d);
     e = sqrt(S) * gamma(d - 0.5) / gamma(d); // expectation E(sigma)
-    E(k) = e;
     d = k * (n - 1) + 1;
     pdf = c * exp(-S * sigma .^ (-2)) .* sigma .^ (-d);
     f = c * exp(-S * e^(-2)) * e^(-d);
