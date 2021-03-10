@@ -1,0 +1,14 @@
+// p0 = 0.95
+#1: E(sigma) = 0.08372, cov. interval (sigma) = [0.04845, 0.12910], p0 = 0.950
+#2: E(sigma) = 0.06910, cov. interval (sigma) = [0.04730, 0.09340], p0 = 0.950
+#3: E(sigma) = 0.06940, cov. interval (sigma) = [0.05130, 0.08885], p0 = 0.950
+
+// p0 = 0.975
+#1: E(sigma) = 0.08372, cov. interval (sigma) = [0.04540, 0.14175], p0 = 0.975
+#2: E(sigma) = 0.06910, cov. interval (sigma) = [0.04575, 0.09955], p0 = 0.975
+#3: E(sigma) = 0.06940, cov. interval (sigma) = [0.04990, 0.09340], p0 = 0.975
+
+// p0 = 0.99
+#1: E(sigma) = 0.08372, cov. interval (sigma) = [0.04335, 0.16100], p0 = 0.990
+#2: E(sigma) = 0.06910, cov. interval (sigma) = [0.04370, 0.10735], p0 = 0.990
+#3: E(sigma) = 0.06940, cov. interval (sigma) = [0.04845, 0.09940], p0 = 0.990
