@@ -3,6 +3,12 @@ clc;
 
 rand('seed', 100500);
 
+// signal form:
+// y = C + sum_{i = 1..nw} (  A(i) * cos( w(i) * x + phi(i) )  )
+//
+// nw = 1: P. Handel, Properties of the IEEE-STD-1057 four-parameter sine wave fit algorithm,
+// IEEE Transactions on Instrumentation and Measurement, v. 46, 6, 2000
+
 
 function [A, phi] = convertToPolar(A0, B0)
 
@@ -169,32 +175,58 @@ function [y] = signal(x, A, w, phi, C)
 endfunction
 
 ////////////////////////////////////////////////////////////////////////////////
+// example
 
-x_max = 10;
-
-A0 = [1., 0.4, 0.3];
-w0 = [2. * %pi, 7. * %pi, 10.];
-phi0 = [%pi / 4., %pi / 3., 0.5];
+A0 = [1., 0.05, 0.03, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01];
+nw = length(A0);
+w0 = (1 : nw) * %pi;
+phi0 = %pi * ones(1, nw);
 C0 = 0.;
 
+
+x_max = 10.;
 nx = 256;
 h = x_max / (nx - 1);
 
 x = 0 : h : x_max;
 
-//dw0 = 0.01 * rand(w0, "normal");
-dw0 = 0.01 * ones(w0);
-
 y = signal(x, A0, w0, phi0, C0);
-y = addNoise(y, 0.1);
-//y = quantization(y, 0.05);
 
+// add noise or/and quantization
+y = addNoise(y, 1.e-2);
+//y = quantization(y, 5.e-2);
 plot(x, y);
 
-[A, phi, C] = fit3params(x, w0, y)
-est_3par = signal(x, A, w0, phi, C);
+////////// 3 parameters per harmonic //////////
+[A3, phi3, C3] = fit3params(x, w0, y)
+est_3par = signal(x, A3, w0, phi3, C3);
 plot(x, est_3par, 'k');
 
-[A, w, phi, C, it] = fit4params(x, w0 + dw0, y)
-est_4par = signal(x, A, w, phi, C);
+////////// 4 parameters per harmonic //////////
+
+// test the algorithm stability: some deviation for the w0 vector
+dw0 = 0.01 * max(w0) * ones(w0);
+
+[A4, w4, phi4, C4, nIt] = fit4params(x, w0 + dw0, y)
+est_4par = signal(x, A4, w4, phi4, C4);
 plot(x, est_4par, 'r');
+
+plot([0., x_max + 3.], [0., 0.], 'k--');
+legend("signal", "3 pph approx.", "4 pph approx.")
+
+// compare (e.g., A, w)
+
+printf("\n\nA: initial, 3-par. appr., 4-par. appr\n");
+for i = 1 : nw
+    printf("%.5f  %.5f  %.5f\n", A0(i), A3(i), A4(i));
+end
+
+printf("\n\nw: initial, 4-par. appr\n");
+for i = 1 : nw
+    printf("%.5f  %.5f\n", w0(i), w4(i));
+end
+
+printf("\n\nphi: initial, 3-par. appr., 4-par. appr\n");
+for i = 1 : nw
+    printf("%.5f  %.5f  %.5f\n", phi0(i), phi3(i), phi4(i));
+end
