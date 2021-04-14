@@ -133,35 +133,6 @@ endfunction
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function [res] = quantization(y, h)
-    res = h * round((1. / h) * y);
-endfunction
-
-function [res] = addNoise(y, h)
-    res = y + h * rand(1, length(y), "normal");
-endfunction
-
-function [y] = chirp(x, w0, w1)
-
-    nx = length(x);
-
-    //w0 + (nx - 1) * dw = w1 => dw = (w1 - w0) / (nx - 1)
-    dw = (w1 - w0) / (nx - 1);
-
-    w = w0;
-
-    y = zeros(1, nx);
-
-    wtmp = 0.;
-    for i = 1 : nx
-        y(i) = cos(w * x(i));
-        wtmp = w;
-        w = w + dw;
-    end
-
-endfunction
-
-
 function [y] = signal(x, A, w, phi, C)
 
     nx = length(x);
@@ -172,6 +143,16 @@ function [y] = signal(x, A, w, phi, C)
         y = y + A(i) * cos(w(i) * x + phi(i));
     end
 
+endfunction
+
+
+function [res] = quantization(y, h)
+    res = h * round((1. / h) * y);
+endfunction
+
+
+function [res] = addNoise(y, h)
+    res = y + h * rand(1, length(y), "normal");
 endfunction
 
 ////////////////////////////////////////////////////////////////////////////////
