@@ -99,8 +99,8 @@ function [A, w, phi, C, it] = fit4params(x, w0, y)
 
             COS = cos(w(i) * x)';
             SIN = sin(w(i) * x)';
-            D(:, 2 * i - 1) = cos(w(i) * x)';
-            D(:, 2 * i    ) = sin(w(i) * x)';
+            D(:, 2 * i - 1) = COS;
+            D(:, 2 * i    ) = SIN;
             a = estPrev(2 * i - 1);
             b = estPrev(2 * i);
             D(:, 2 * nw + 1 + i) = -a * (x' .* SIN) + b * (x' .* COS);
