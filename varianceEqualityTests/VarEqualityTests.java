@@ -2,6 +2,7 @@
 import java.util.Arrays;
 import java.util.Random;
 
+
 /**
  * @author astepanov
  */
@@ -29,7 +30,7 @@ public class VarEqualityTests {
         double c = 0.5;
 
         // make the variance equal to 1
-        double var = 0.5 / ((p + 1.) * (p + 2.)); 
+        double var = 0.5 / ((p + 1.) * (p + 2.));
         double kv = 1. / Math.sqrt(var);
 
         for (int i = 0; i < n; ++i) {
@@ -66,8 +67,7 @@ public class VarEqualityTests {
         s1 /= (n1 - 1.);
         s2 /= (n2 - 1.);
 
-        double r = s1 / s2;
-        return (s1 > s2) ? r : 1. / r;
+        return s1 / s2;
     }
 
     private double getRangeRatio(double x1[], double x2[]) {
@@ -80,8 +80,7 @@ public class VarEqualityTests {
         double r1 = x1[n1 - 1] - x1[0];
         double r2 = x2[n2 - 1] - x2[0];
 
-        double r = r1 / r2;
-        return (r1 > r2) ? r : 1. / r;
+        return r1 / r2;
     }
 
     private double getR(double x1[], double x2[], TEST type) {
@@ -114,6 +113,17 @@ public class VarEqualityTests {
         return res;
     }
 
+    private double[] getCriticalValsAvg(int n1, int n2, double p, int nSim, int nAvg) {
+
+        double c1 = 0., c2 = 0.;
+        for (int i = 0; i < nAvg; ++i) {
+            double c[] = getCriticalVals(n1, n2, p, nSim);
+            c1 += c[0];
+            c2 += c[1];
+        }
+        return new double[]{c1 / nAvg, c2 / nAvg};
+    }
+
     private double getP(int n1, int n2, double p, double c, double C1, double C2, int nSim) {
 
         double P = nSim;
@@ -134,53 +144,42 @@ public class VarEqualityTests {
         return P / nSim;
     }
 
-    private static double roundTo(double x, double h) {
+    private double getPAvg(int n1, int n2, double p, double c, double C1, double C2, int nSim, int nAvg) {
 
-        double tmp = 1. / h;
-        return h * Math.round(tmp * x);
+        double P = 0.;
+        for (int i = 0; i < nAvg; ++i) {
+            P += getP(n1, n2, p, c, C1, C2, nSim);
+        }
+        return P / nAvg;
     }
 
-    public static void main(String[] args) {
+
+    public static void main(String args[]) {
 
         VarEqualityTests calculator =
                 new VarEqualityTests(VarEqualityTests.TEST.VAR_RATIO);
 
         int N[][] = {
-            {10,  5},
             {10, 10},
-            {15,  5},
-            {15, 10},
-            {15, 15},
-            {20,  5},
-            {20, 10},
-            {20, 15},
-            {20, 20}
+            {10, 15},
+            {10, 20}
         };
 
         int nSim = 1_000_000, nAvg = 200;
 
-        double p = 1.;
+        double p = 3.;
 
         for (int n[]: N) {
 
             int n1 = n[0], n2 = n[1];
 
-            double c1 = 0., c2 = 0.;
-            for (int i = 0; i < nAvg; ++i) {
-                double cv[] = calculator.getCriticalVals(n1, n2, p, nSim);
-                c1 += cv[0];
-                c2 += cv[1];
-            }
-            c1 /= nAvg;
-            c2 /= nAvg;
-
-            c1 = roundTo(c1, 1.e-3);
-            c2 = roundTo(c2, 1.e-2);
+            double c[] = calculator.getCriticalValsAvg(n1, n2, p, nSim, nAvg);
+            double c1 = c[0], c2 = c[1];
 
             // check (must be ~0.95)
-            double P = calculator.getP(n1, n2, p, 1., c1, c2, 5 * nSim);
+            double P = calculator.getPAvg(n1, n2, p, 1., c1, c2, nSim, 10);
 
-            System.out.printf("%d\t%d\t%.3f\t%.2f\t%.3f\n", n1, n2, c1, c2, P);
+            System.out.printf("%d\t%d\t%.3f\t%.3f\t%.3f\n", n1, n2, c1, c2, P);
         }
     }
 }
