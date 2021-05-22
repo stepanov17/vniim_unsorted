@@ -1,0 +1,8 @@
+two-side test:
+
+r = S1 / S2 or r = r1 / r2 (S1, S2 are sample variances; r1, r2 are sample ranges)
+
+if r >= 1 then check:    1 / crit(n2, n1) < r < crit(n1, n2)
+else check:              1 / crit(n1, n2) < r < crit(n2, n1)
+
+the critical values are given for P0 = 0.95
