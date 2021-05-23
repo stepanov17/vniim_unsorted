@@ -75,7 +75,6 @@ public class CochranTSP {
             else if (t > maxx) { maxx = t; }
         }
 
-        System.out.println(minx + " " + maxx);
         return maxx - minx;
     }
 
