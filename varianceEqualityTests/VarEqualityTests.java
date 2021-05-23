@@ -47,50 +47,44 @@ public class VarEqualityTests {
         return e;
     }
 
-    private double getVarRatio(double x1[], double x2[]) {
+    private double getS2(double x[]) {
 
-        int n1 = x1.length, n2 = x2.length;
+        int nx = x.length;
+        if (nx < 3) { throw new IllegalArgumentException("invalid nx: " + nx); }
 
-        double m1 = 0., m2 = 0.;
+        double m = 0., s = 0.;
+        for (double v: x) { m += v; }
+        m /= nx;
 
-        for (double v: x1) { m1 += v; }
-        m1 /= n1;
+        for (double v: x) { s += (v - m) * (v - m); }
 
-        for (double v: x2) { m2 += v; }
-        m2 /= n2;
-
-        double s1 = 0., s2 = 0.;
-
-        for (double v: x1) { s1 += (v - m1) * (v - m1); }
-        for (double v: x2) { s2 += (v - m2) * (v - m2); }
-
-        s1 /= (n1 - 1.);
-        s2 /= (n2 - 1.);
-
-        return s1 / s2;
+        return s / (nx - 1.);
     }
 
-    private double getRangeRatio(double x1[], double x2[]) {
+    private double getRange(double x[]) {
 
-        int n1 = x1.length, n2 = x2.length;
+        int nx = x.length;
+        if (nx < 3) { throw new IllegalArgumentException("invalid nx: " + nx); }
 
-        Arrays.sort(x1);
-        Arrays.sort(x2);
-
-        double r1 = x1[n1 - 1] - x1[0];
-        double r2 = x2[n2 - 1] - x2[0];
-
-        return r1 / r2;
-    }
-
-    private double getR(double x1[], double x2[], TEST type) {
-
-        if (type == TEST.VAR_RATIO) {
-            return getVarRatio(x1, x2);
+        double minx = x[0], maxx = x[0];
+        for (int i = 1; i < nx; ++i) {
+            double t = x[i];
+            if (t < minx) { minx = t; }
+            else if (t > maxx) { maxx = t; }
         }
 
-        return getRangeRatio(x1, x2);
+        return maxx - minx;
     }
+
+    private double getR(double x1[], double x2[]) {
+
+        if (testType == TEST.RANGE_RATIO) {
+            return getRange(x1) / getRange(x2);
+        } else {
+            return getS2(x1) / getS2(x2);
+        }
+    }
+
 
     private double[] getCriticalVals(int n1, int n2, double p, int nSim) {
 
@@ -100,7 +94,7 @@ public class VarEqualityTests {
             double x1[] = getTSPSample(n1, p);
             double x2[] = getTSPSample(n2, p);
 
-            r[i] = getR(x1, x2, testType);
+            r[i] = getR(x1, x2);
         }
 
         Arrays.sort(r);
@@ -137,7 +131,7 @@ public class VarEqualityTests {
                 for (int j = 0; j < n2; ++j) { x2[j] *= c; }
             }
 
-            double r = getR(x1, x2, testType);
+            double r = getR(x1, x2);
             if ((r < C1) || (r > C2)) { --P; }
         }
 
