@@ -162,6 +162,41 @@ public class CochranTSP {
         return P / nAvg;
     }
 
+    private void calculateTestPow(int nSamples, int nx, double p) {
+
+        double kMax = 5., dk = 5.e-3;
+
+        System.out.println("// " + testType +  ", nSamples = " + nSamples + ", nx = " + nx + ", p = " + p);
+        System.out.println("");
+
+        int nSim = 1_000_000, nAvg = 10;
+
+        double c = getCriticalValAvg(nx, nSamples, p, nSim, 2 * nAvg);
+
+        double k = 1., pow = 0.;
+
+        System.out.println("data = [");
+
+        boolean first = true;
+
+        while ((k <= kMax + 0.1 * dk) && (pow <= 0.9995)) {
+
+            pow = 1. - getPAvg(nx, nSamples, p, k, c, nSim, nAvg);
+            if (first) {
+                // check
+                if (Math.abs(1. - P0 - pow) > 2.e-3) {
+                    System.err.println("pow != 1 - P0: " + pow);
+                }
+                first = false;
+            }
+
+            System.out.printf("%.3f\t%.3f\n", k, pow);
+            k += dk;
+        }
+
+        System.out.println("];");
+    }
+
 
     public static void main(String args[]) {
 
