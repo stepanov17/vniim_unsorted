@@ -10,7 +10,7 @@ public class VarProximityTests {
 
     private final double dR;
 
-    //  I) H0 : sigma_1 / sigma_2 ~ U(1 - dR, 1 + dR)
+    //  I) H0 : sigma_2 / sigma_1 ~ U(1 - dR, 1 + dR)
     // II) H0 : sigma_1, sigma_2 = sigma_0 * d, d ~ U(1 - dR, 1 + dR)
     public static enum HYPOTHESIS{I, II};
 
@@ -109,7 +109,7 @@ public class VarProximityTests {
             if (hypothesis == HYPOTHESIS.II) {
 
                 double s1 = RND.nextDouble() * 2. * dR + 1. - dR;
-                for (int j = 0; j < n2; ++j) { x1[j] *= s1; }
+                for (int j = 0; j < n1; ++j) { x1[j] *= s1; }
             }
 
             // I, II
@@ -152,16 +152,12 @@ public class VarProximityTests {
             if (hypothesis == HYPOTHESIS.II) {
 
                 double s1 = RND.nextDouble() * 2. * dR + 1. - dR;
-                for (int j = 0; j < n2; ++j) { x1[j] *= s1; }
+                for (int j = 0; j < n1; ++j) { x1[j] *= s1; }
             }
 
             // I, II
-            double s2 = RND.nextDouble() * 2. * dR + 1. - dR;
+            double s2 = c * (RND.nextDouble() * 2. * dR + 1. - dR);
             for (int j = 0; j < n2; ++j) { x2[j] *= s2; }
-
-            if (Math.abs(c - 1.) > 1.e-8) {
-                for (int j = 0; j < n2; ++j) { x2[j] *= c; }
-            }
 
             double r = getR(x1, x2);
             if ((r < C1) || (r > C2)) { --P; }
@@ -186,7 +182,7 @@ public class VarProximityTests {
 
         VarProximityTests calculator = new VarProximityTests(
                 dR,
-                HYPOTHESIS.I,
+                HYPOTHESIS.II,
                 TEST.VAR_RATIO);
 
         int N[][] = {
@@ -195,7 +191,7 @@ public class VarProximityTests {
             {20, 20}
         };
 
-        int nSim = 1_000_000, nAvg = 50;
+        int nSim = 1_000_000, nAvg = 500;
 
         double p = 1.;
 
