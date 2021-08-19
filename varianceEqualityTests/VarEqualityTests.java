@@ -151,7 +151,7 @@ public class VarEqualityTests {
     public static void main(String args[]) {
 
         VarEqualityTests calculator =
-                new VarEqualityTests(VarEqualityTests.TEST.VAR_RATIO);
+                new VarEqualityTests(TEST.VAR_RATIO);
 
         int N[][] = {
             {10, 10},

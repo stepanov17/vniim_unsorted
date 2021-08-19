@@ -200,7 +200,7 @@ public class CochranTSP {
 
     public static void main(String args[]) {
 
-        CochranTSP calculator = new CochranTSP(CochranTSP.TEST.VAR_RATIO);
+        CochranTSP calculator = new CochranTSP(TEST.VAR_RATIO);
 
         int nSim = 1_000_000, nAvg = 20;
         double p = -1.;
