@@ -51,6 +51,7 @@ public class SineFit {
     private double A[];
     private double phi[];
     private double C;
+    private int nIt;
 
     public void fit4n(double x[], double y[], double w0[]) {
 
@@ -104,19 +105,20 @@ public class SineFit {
 
             double est[] = lSolve(D, y);
 
-            double eps = 0.;
-            for (int i = 0; i < est.length; ++i) {
-                double tmp = est[i] - estPrev[i];
-                eps += tmp * tmp;
-            }
-
             for (int i = 0; i < nw; ++i) {
                 w[i] += est[2 * nw + 1 + i];
             }
 
+            double eps = Signal.r2(est, estPrev);
+
+            //System.out.println(">> it = " + it + " >> eps >> " +eps); // debug
+
+            nIt = it + 1;
+
+            if (eps < EPS) { break; }
+
             for (int i = 0; i < est.length; ++i) { estPrev[i] = est[i]; }
 
-            if (Math.sqrt(eps) < EPS) { break; }
         } // it
 
         A   = new double[nw];
@@ -175,7 +177,7 @@ public class SineFit {
                     if (j == 0) {
 
                         double a = estPrev[0], b = estPrev[1];
-                        D[i][2 * nw + 1] = 
+                        D[i][2 * nw + 1] =
                             x[i] * ( -a * Math.sin(t) + b * Math.cos(t) );
                     }
                 }
@@ -184,18 +186,18 @@ public class SineFit {
             for (int i = 0; i < nx; ++i) { D[i][2 * nw] = 1.; }
 
             double est[] = lSolve(D, y);
-
-            double eps = 0.;
-            for (int i = 0; i < est.length; ++i) {
-                double tmp = est[i] - estPrev[i];
-                eps += tmp * tmp;
-            }
-
             ww += est[2 * nw + 1];
+
+            double eps = Signal.r2(est, estPrev);
+
+            //System.out.println(">> it = " + it + " >> eps >> " +eps); // debug
+
+            nIt = it + 1;
+
+            if (eps < EPS) { break; }
 
             for (int i = 0; i < est.length; ++i) { estPrev[i] = est[i]; }
 
-            if (Math.sqrt(eps) < EPS) { break; }
         } // it
 
         w = new double[nw];
@@ -214,29 +216,6 @@ public class SineFit {
         }
 
         C = estPrev[2 * nw];
-    }
-
-    private static double cmp(double x[], double y[]) {
-
-        int nx = x.length;
-        if (y.length != nx) { throw new RuntimeException("nx != ny"); }
-
-        double d = 0.;
-        for (int i = 0; i < nx; ++i) {
-            d = Math.max(d, Math.abs(x[i] - y[i]));
-        }
-        return d;
-    }
-
-    private static double[] quantization(double x[], double h) {
-
-        int nx = x.length;
-        double v[] = new double[nx];
-
-        double c = 1. / h;
-        for (int i = 0; i < nx; ++i) { v[i] = h * Math.round(c * x[i]); }
-
-        return v;
     }
 
 
@@ -268,7 +247,7 @@ public class SineFit {
 
         double y[];
         if (h_q > 1.e-7) {
-            y = quantization(s, h_q);
+            y = Signal.quantization(s, h_q);
         } else {
             y = s;
         }
@@ -281,10 +260,11 @@ public class SineFit {
 
         System.out.println("");
         System.out.println(">> test 1, nw = " + nw + ", h_q = " + h_q);
-        System.out.println("w:   " + cmp(sf.w,   wSig));
-        System.out.println("A:   " + cmp(sf.A,   ASig));
-        System.out.println("phi: " + cmp(sf.phi, phiSig));
-        System.out.println("C:   " + Math.abs(sf.C));
+        System.out.println("w:   " + Signal.maxDiff(sf.w,   wSig));
+        System.out.println("A:   " + Signal.maxDiff(sf.A,   ASig));
+        System.out.println("phi: " + Signal.maxDiff(sf.phi, phiSig));
+        System.out.println("C:   " + Math.abs(Example.C - sf.C));
+        System.out.println("nIt: " + sf.nIt);
     }
 
     private static void test_2(double h_q) {
@@ -311,7 +291,7 @@ public class SineFit {
 
         double y[];
         if (h_q > 1.e-7) {
-            y = quantization(s, h_q);
+            y = Signal.quantization(s, h_q);
         } else {
             y = s;
         }
@@ -321,10 +301,61 @@ public class SineFit {
 
         System.out.println("");
         System.out.println(">> test 2, nw = " + nw + ", h_q = " + h_q);
-        System.out.println("w:   " + cmp(sf.w,   wSig));
-        System.out.println("A:   " + cmp(sf.A,   ASig));
-        System.out.println("phi: " + cmp(sf.phi, phiSig));
-        System.out.println("C:   " + Math.abs(sf.C));
+        System.out.println("w:   " + Signal.maxDiff(sf.w,   wSig));
+        System.out.println("A:   " + Signal.maxDiff(sf.A,   ASig));
+        System.out.println("phi: " + Signal.maxDiff(sf.phi, phiSig));
+        System.out.println("C:   " + Math.abs(Example.C - sf.C));
+        System.out.println("nIt: " + sf.nIt);
+    }
+
+
+    private static void MC(int nSim, double h_q, double sigma) {
+
+        double h = 1. / F_Q;
+
+        double f_0 = 50.; // [Hz]
+        double w_0 = 2. * Math.PI * f_0;
+
+        int nT = 10;
+        double T = nT / f_0;
+
+        int N = (int) (T * F_Q);
+        double x[] = new double[N];
+        for (int i = 0; i < N; ++i) { x[i] = h * i; }
+
+        int nw = 50;
+
+        double wSig[]   = Arrays.copyOf(Example.w,   nw);
+        double ASig[]   = Arrays.copyOf(Example.A,   nw);
+        double phiSig[] = Arrays.copyOf(Example.phi, nw);
+
+        double s[] = Signal.generate(x, ASig, wSig, phiSig, Example.C);
+
+        SineFit sf = new SineFit();
+
+        for (int sim = 0; sim < nSim; ++sim) {
+
+            double y[] = Signal.addNoise(s, sigma);
+
+            if (h_q > 1.e-7) {
+                y = Signal.quantization(y, h_q);
+            }
+
+            sf.fit4n_wMult(x, y, w_0, nw);
+
+            double dw   = Signal.maxDiff(sf.w,   wSig);
+            double dA   = Signal.maxDiff(sf.A,   ASig);
+            double dphi = Signal.maxDiff(sf.phi, phiSig);
+            double dC = Math.abs(Example.C - sf.C);
+
+            System.out.println(
+                    (sim + 1)  + "\t" +
+                    dw         + "\t" +
+                    dA         + "\t" +
+                    dphi       + "\t" +
+                    dC         + "\t" +
+                    sf.nIt);
+        }
     }
 
     public static void main(String args[]) {
@@ -334,5 +365,17 @@ public class SineFit {
 
         test_2(0.);
         test_2(0.001);
+
     }
+
+    // Monte Carlo: check the characteristics of the estimations
+//    public static void main(String args[]) {
+//
+//        double h_q = 1.e-3;
+//        double p = 0.01;
+//        double sigma = 0.01 * p * Example.A[0];
+//        System.out.println(
+//            "// sigma = " + sigma + " (" + p + "% of A[0]), h_q = " + h_q);
+//        MC(1_000_000, h_q, sigma);
+//    }
 }
