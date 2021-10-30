@@ -54,15 +54,29 @@ public class Signal {
         return v;
     }
 
-    public static double maxDiff(double x[], double y[]) {
+    public static double maxErr(double x[], double ref[], boolean relative) {
 
         int nx = x.length;
-        if (y.length != nx) { throw new RuntimeException("nx != ny"); }
+        if (ref.length != nx) { throw new RuntimeException("nx != ny"); }
 
         double d = 0.;
-        for (int i = 0; i < nx; ++i) { d = Math.max(d, Math.abs(x[i] - y[i])); }
+        for (int i = 0; i < nx; ++i) {
+
+            double v = ref[i];
+
+            d = Math.max(d, Math.abs(x[i] - v));
+
+            if (relative && (Math.abs(v) > 0.)) {
+                d /= Math.abs(v);
+            }
+        }
 
         return d;
+    }
+
+    public static double maxDiff(double x[], double y[]) {
+
+        return maxErr(x, y, false);
     }
 
     public static double r2(double x[], double y[]) {
@@ -70,10 +84,10 @@ public class Signal {
         int nx = x.length;
         if (y.length != nx) { throw new RuntimeException("nx != ny"); }
 
-        double r = 0.;
+        double s = 0.;
 
-        for (int i = 0; i < nx; ++i) { r += (x[i] - y[i]) * (x[i] - y[i]); }
+        for (int i = 0; i < nx; ++i) { s += (x[i] - y[i]) * (x[i] - y[i]); }
 
-        return Math.sqrt(r);
+        return Math.sqrt(s);
     }
 }

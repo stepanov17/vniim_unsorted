@@ -309,7 +309,8 @@ public class SineFit {
     }
 
 
-    private static void MC(int nSim, double h_q, double sigma) {
+    // Monte Carlo: check the characteristics of the estimations
+    private static void MC(int nSim, double h_q, double sigma, boolean relErr) {
 
         double h = 1. / F_Q;
 
@@ -343,9 +344,9 @@ public class SineFit {
 
             sf.fit4n_wMult(x, y, w_0, nw);
 
-            double dw   = Signal.maxDiff(sf.w,   wSig);
-            double dA   = Signal.maxDiff(sf.A,   ASig);
-            double dphi = Signal.maxDiff(sf.phi, phiSig);
+            double dw   = Signal.maxErr(sf.w,   wSig,   relErr);
+            double dA   = Signal.maxErr(sf.A,   ASig,   relErr);
+            double dphi = Signal.maxErr(sf.phi, phiSig, relErr);
             double dC = Math.abs(Example.C - sf.C);
 
             System.out.println(
@@ -365,17 +366,16 @@ public class SineFit {
 
         test_2(0.);
         test_2(0.001);
-
     }
 
-    // Monte Carlo: check the characteristics of the estimations
 //    public static void main(String args[]) {
 //
 //        double h_q = 1.e-3;
 //        double p = 0.01;
 //        double sigma = 0.01 * p * Example.A[0];
+//        boolean rel = true;
 //        System.out.println(
-//            "// sigma = " + sigma + " (" + p + "% of A[0]), h_q = " + h_q);
-//        MC(1_000_000, h_q, sigma);
+//            "// sigma = " + sigma + " (" + p + "% of A[0]), h_q = " + h_q + ", rel = " + rel);
+//        MC(1_000_000, h_q, sigma, rel);
 //    }
 }
