@@ -1,5 +1,9 @@
 
-import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class BayesSigmaCIEstimator {
@@ -35,24 +39,15 @@ public class BayesSigmaCIEstimator {
         return res;
     }
 
-    private final Random rnd = new Random(100500L);
-
     private final double p0 = 0.95;
 
     private final double maxSigma;
     private final double dSigma;
-
     private final double sigma[];
-    private final double pdf1[], pdf2[];
-    //private double E1 = Double.NaN, E2 = Double.NaN;
-
     private final int nSigma;
 
     private final int n1, n2;
     private final double sigma1, sigma2;
-
-//    double minLeft = 1.e10, maxRight = 0.;
-    double maxRight = 0.;
 
     public BayesSigmaCIEstimator(int    n1,
                                  double sigma1,
@@ -67,15 +62,13 @@ public class BayesSigmaCIEstimator {
 
         this.maxSigma = maxSigma;
         this.dSigma   = dSigma;
-
         sigma = getSigmaRange(dSigma, maxSigma);
         nSigma = sigma.length;
-
-        pdf1 = new double[nSigma];
-        pdf2 = new double[nSigma];
     }
 
     private double[] getCenteredSample(int n, double s) {
+
+        ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
         double res[] = new double[n];
         double mean = 0.;
@@ -92,11 +85,24 @@ public class BayesSigmaCIEstimator {
         return res;
     }
 
-    private void recalculatePDFs(double sample1[], double sample2[]) {
+    private int check(double ci1[], double ci2[]) {
 
-        if ((sample1.length != n1) || (sample2.length != n2)) {
-            throw new RuntimeException("invalid sample length");
+        if ((ci1.length != 2) || (ci2.length != 2)) {
+            throw new RuntimeException("invalid CI data");
         }
+
+        if ((ci1[1] < 0.) || (ci2[1] < 0.)) { return -1; }
+
+        double l1 = ci1[1], l2 = ci2[1];
+
+        if (l1 > l2) { return 1; } // todo: other checks?
+        return 0;
+    }
+
+    private int iteration() {
+
+        double sample1[] = getCenteredSample(n1, sigma1);
+        double sample2[] = getCenteredSample(n2, sigma2);
 
         double S = 0.;
 
@@ -109,11 +115,14 @@ public class BayesSigmaCIEstimator {
         double C1 = (2. * Math.pow(S1, 0.5 * (n1 - 1))) / gamma(0.5 * (n1 - 1));
         double C2 = (2. * Math.pow(S2, n2 - 1)) / gamma(n2 - 1);
 
-        //E1 = Math.sqrt(S1) * gamma(0.5 * n1 - 1.) / gamma(0.5 * (n1 - 1));
-        //E2 = Math.sqrt(S2) * gamma(n2 - 1.5) / gamma(n2 - 1);
+        //double E1 = Math.sqrt(S1) * gamma(0.5 * n1 - 1.) / gamma(0.5 * (n1 - 1));
+        //double E2 = Math.sqrt(S2) * gamma(n2 - 1.5) / gamma(n2 - 1);
 
         int p1 = n1;
         int p2 = 2 * (n2 - 1) + 1;
+
+        double pdf1[] = new double[nSigma];
+        double pdf2[] = new double[nSigma];
 
         for (int i = 0; i < nSigma; ++i) {
 
@@ -121,6 +130,11 @@ public class BayesSigmaCIEstimator {
             pdf1[i] = C1 * Math.exp(-S1 / (s * s)) * Math.pow(s, -p1);
             pdf2[i] = C2 * Math.exp(-S2 / (s * s)) * Math.pow(s, -p2);
         }
+
+        double ci1[] = coverageInterval(pdf1);
+        double ci2[] = coverageInterval(pdf2);
+
+        return check(ci1, ci2);
     }
 
     private double coverageIntervalLength(double pdf[], int i0) {
@@ -178,7 +192,6 @@ public class BayesSigmaCIEstimator {
         double ci[] = new double[]{-1., -1.};
 
         int i0 = coverageIntervalStartIndex(pdf, 1.e-5);
-        //System.out.println("start from " + i0);
 
         double L0 = 10. * maxSigma;
 
@@ -204,61 +217,71 @@ public class BayesSigmaCIEstimator {
         return ci;
     }
 
-    private int iteration() {
+//    private void MC(int nSim) {
+//
+//        double P = 0.;
+//        int n = 0;
+//        for (int sim = 1; sim <= nSim; ++sim) {
+//
+//            int v = iteration();
+//            if (v > -1) {
+//                P += v;
+//                ++n;
+//            }
+//
+//            System.out.printf(">> %d >> %.3f\n", sim, P / n);
+//        }
+//
+//        double u = 1. - (n + 0.) / nSim;
+//        System.out.printf("undefined: %d (%.2f%%)\n", (nSim - n), 100. * u);
+//    }
 
-        double x1[] = getCenteredSample(n1, sigma1);
-        double x2[] = getCenteredSample(n2, sigma2);
 
-        recalculatePDFs(x1, x2);
+    private void MC(int nSim, int nThreads) {
 
-        double ci1[] = coverageInterval(pdf1);
-        if (ci1[1] < 0.) { return -1; }
+        ThreadPoolExecutor executor =
+                (ThreadPoolExecutor) Executors.newFixedThreadPool(nThreads);
 
-        double ci2[] = coverageInterval(pdf2);
-        if (ci2[1] < 0.) { return -1; }
+        final AtomicInteger nP = new AtomicInteger(0);
+        final AtomicInteger nU = new AtomicInteger(0);
 
-        double l1 = ci1[1], l2 = ci2[1];
+        for (int sim = 0; sim <= nSim; ++sim) {
 
-        maxRight = Math.max(maxRight, ci1[0] + l1);
-        maxRight = Math.max(maxRight, ci2[0] + l2);
+            final int i = sim;
 
-        if (l1 > l2) { return 1; } // todo: other checks
-        return 0;
-    }
+            executor.execute(
+                    () -> {
+                        int v = iteration();
+                        if (v > 0) {
+                            nP.incrementAndGet();
+                        } else if (v < 0) {
+                            nU.incrementAndGet();
+                        }
 
-    private void MC(int nSim) {
-
-        double P = 0.;
-        int n = 0;
-        for (int sim = 1; sim <= nSim; ++sim) {
-
-            int v = iteration();
-            if (v > -1) {
-                P += v;
-                ++n;
-            }
-
-            System.out.printf(">> %d >> %.3f\n", sim, P / n);
+                        if (i % 100 == 0) { System.out.println(">> " + i); }
+                    });
         }
 
-        double u = 1. - (n + 0.) / nSim;
-        System.out.printf("undefined: %d (%.2f%%)\n", (nSim - n), 100. * u);
+        executor.shutdown();
+
+        try {
+            Thread.sleep(100);
+            executor.awaitTermination(3, TimeUnit.HOURS);
+        } catch (InterruptedException ie) { System.err.println("interrupted"); }
+
+        double P = nP.get();
+        System.out.printf("\n>> P = %.3f, nUndefined = %d\n", P / nSim, nU.get());
     }
 
-    private void printMaxRight() {
-        System.out.printf(">> maxRight = %.5f\n", maxRight);
-    }
 
-    public static void main(String[] args) {
+    public static void main(String args[]) {
 
         int n = 10;
         BayesSigmaCIEstimator e = new BayesSigmaCIEstimator(
-            n, 1., n, 1., 20., 2.e-4);
+            n, 1., n, 2., 20., 2.e-4);
 
-        e.MC(100_000);
+        e.MC(100_000, 6);
 
         System.out.println("");
-
-        e.printMaxRight();
     }
 }
