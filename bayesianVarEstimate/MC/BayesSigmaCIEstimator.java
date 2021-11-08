@@ -1,12 +1,13 @@
-
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class BayesSigmaCIEstimator {
+
+    private final static int MC_TIMEOUT_SEC = 3 * 3600;
 
     private static double[] getSigmaRange(double step, double maxSigma) {
 
@@ -49,6 +50,7 @@ public class BayesSigmaCIEstimator {
     private final int n1, n2;
     private final double sigma1, sigma2;
 
+
     public BayesSigmaCIEstimator(int    n1,
                                  double sigma1,
                                  int    n2,
@@ -85,21 +87,7 @@ public class BayesSigmaCIEstimator {
         return res;
     }
 
-    private int check(double ci1[], double ci2[]) {
-
-        if ((ci1.length != 2) || (ci2.length != 2)) {
-            throw new RuntimeException("invalid CI data");
-        }
-
-        if ((ci1[1] < 0.) || (ci2[1] < 0.)) { return -1; }
-
-        double l1 = ci1[1], l2 = ci2[1];
-
-        if (l1 > l2) { return 1; } // todo: other checks?
-        return 0;
-    }
-
-    private int iteration() {
+    private double iteration() {
 
         double sample1[] = getCenteredSample(n1, sigma1);
         double sample2[] = getCenteredSample(n2, sigma2);
@@ -134,7 +122,8 @@ public class BayesSigmaCIEstimator {
         double ci1[] = coverageInterval(pdf1);
         double ci2[] = coverageInterval(pdf2);
 
-        return check(ci1, ci2);
+        double l1 = ci1[1], l2 = ci2[1];
+        return l2 / l1; // todo: other checks
     }
 
     private double coverageIntervalLength(double pdf[], int i0) {
@@ -160,7 +149,6 @@ public class BayesSigmaCIEstimator {
             return -1.;
         }
 
-        //System.out.println("I ~ " + I); // debug
         if (Math.abs(I - p0) > 1.e-3) { // should not exceed 0.1%
             System.err.println("too rough estimate, I ~ " + I);
         }
@@ -217,71 +205,96 @@ public class BayesSigmaCIEstimator {
         return ci;
     }
 
-//    private void MC(int nSim) {
-//
-//        double P = 0.;
-//        int n = 0;
-//        for (int sim = 1; sim <= nSim; ++sim) {
-//
-//            int v = iteration();
-//            if (v > -1) {
-//                P += v;
-//                ++n;
-//            }
-//
-//            System.out.printf(">> %d >> %.3f\n", sim, P / n);
-//        }
-//
-//        double u = 1. - (n + 0.) / nSim;
-//        System.out.printf("undefined: %d (%.2f%%)\n", (nSim - n), 100. * u);
-//    }
-
-
-    private void MC(int nSim, int nThreads) {
+    private double MC(int nSim, int nThreads, boolean calculateCritValue, double C) throws InterruptedException {
 
         ThreadPoolExecutor executor =
-                (ThreadPoolExecutor) Executors.newFixedThreadPool(nThreads);
+            (ThreadPoolExecutor) Executors.newFixedThreadPool(nThreads);
 
-        final AtomicInteger nP = new AtomicInteger(0);
-        final AtomicInteger nU = new AtomicInteger(0);
+        double r[] = new double[nSim];
 
-        for (int sim = 0; sim <= nSim; ++sim) {
+        Arrays.fill(r, -1.);
 
-            final int i = sim;
+        for (int sim = 0; sim < nSim; ++sim) {
+
+            int i = sim;
 
             executor.execute(
-                    () -> {
-                        int v = iteration();
-                        if (v > 0) {
-                            nP.incrementAndGet();
-                        } else if (v < 0) {
-                            nU.incrementAndGet();
-                        }
 
-                        if (i % 100 == 0) { System.out.println(">> " + i); }
-                    });
+                () -> {
+
+                    r[i] = iteration();
+
+                    if ((i > 0) && ((i + 1) % 1000 == 0)) {
+                        System.out.println(">> " + (i + 1));
+                    }
+                });
         }
 
         executor.shutdown();
 
-        try {
-            Thread.sleep(100);
-            executor.awaitTermination(3, TimeUnit.HOURS);
-        } catch (InterruptedException ie) { System.err.println("interrupted"); }
+        Thread.sleep(100);
+        if (!executor.awaitTermination(MC_TIMEOUT_SEC, TimeUnit.SECONDS)) {
+            throw new RuntimeException("the calculations were not completed");
+        }
 
-        double P = nP.get();
-        System.out.printf("\n>> P = %.3f, nUndefined = %d\n", P / nSim, nU.get());
+        int undefined = 0;
+        double res;
+
+        if (calculateCritValue) {
+
+            Arrays.parallelSort(r);
+
+            for (double v: r) {
+                if (v < 0.) { ++undefined; }
+                else { break; }
+            }
+
+            double distr[] = Arrays.copyOfRange(r, undefined, nSim);
+            int i0 = (int) (p0 * distr.length);
+            res = distr[i0 - 1];
+
+        } else {
+
+            int s = 0;
+            for (double v: r) {
+                if (v < 0.) { ++undefined; }
+                else if (v <= C) { ++s; }
+            }
+            res = s;
+            res /= (nSim - undefined);
+        }
+
+        if (undefined > 0) { System.err.println("undefined: " + undefined); }
+
+        return res;
+    }
+
+    public double calculateCriticalValue(int nSim, int nThreads) throws InterruptedException {
+
+        return MC(nSim, nThreads, true, -1.);
+    }
+
+    public double calculateP(double cv, int nSim, int nThreads) throws InterruptedException {
+
+        return MC(nSim, nThreads, false, cv);
     }
 
 
-    public static void main(String args[]) {
+    public static void main(String args[]) throws InterruptedException {
 
-        int n = 10;
+        int n = 10, nSim = 100_000;
+
+        int nThreads = Math.max(1, Runtime.getRuntime().availableProcessors() / 2);
+        System.out.println("nThreads = " + nThreads);
+
         BayesSigmaCIEstimator e = new BayesSigmaCIEstimator(
-            n, 1., n, 2., 20., 2.e-4);
+            n, 1., n, 1., 15., 2.e-4);
 
-        e.MC(100_000, 6);
+        double cv = e.calculateCriticalValue(nSim, nThreads);
+        System.out.printf("%.3f\n\n", cv);
 
-        System.out.println("");
+        // check: ~ p0
+        double p = e.calculateP(cv, nSim / 2, nThreads);
+        System.out.printf("%.3f\n", p);
     }
 }
